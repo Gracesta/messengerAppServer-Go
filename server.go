@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -65,6 +66,28 @@ func (server *Server) Handler(conn net.Conn) {
 
 	// Online anouncement for new user
 	server.BroadCast(user, "ONLINE")
+
+	// Handle message sent from client
+	go func() {
+		buff := make([]byte, 4096) // message buffer
+		for {
+			len_message, err := conn.Read(buff)
+			if len_message == 0 {
+				server.BroadCast(user, "Disconnected")
+			}
+
+			if err != nil && err != io.EOF {
+				fmt.Println("Conn read error:", err)
+				return
+			}
+
+			// save message withought the last '\n'
+			msg := string(buff[:len_message-1])
+
+			server.BroadCast(user, msg)
+
+		}
+	}()
 
 	// select{}
 }
