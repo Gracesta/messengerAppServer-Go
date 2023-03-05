@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type User struct {
 	UserName string
@@ -56,6 +59,42 @@ func (user *User) Offline() {
 	user.server.BroadCast(user, "OFFLINE")
 }
 
+func (user *User) SendMsg(msg string) {
+	user.conn.Write(([]byte(msg)))
+}
+
 func (user *User) DoMessage(msg string) {
-	user.server.BroadCast(user, msg)
+	// search online user command
+	if msg == "who" {
+
+		user.server.mapLock.Lock()
+		for _, u := range user.server.OnlineUserMap {
+			onlineMsg := "[" + u.UserAddr + "]" + u.UserName + ": Online\n"
+			user.SendMsg(onlineMsg)
+		}
+		user.server.mapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		// rename|YOUR NEW NICK NAME
+		newName := strings.Split(msg, "|")[1]
+
+		// check if the new name is unique
+		_, isExist := user.server.OnlineUserMap[newName]
+		if isExist {
+			user.SendMsg("This nickname already been used\n")
+		} else {
+			// delete the user from online map
+			user.server.mapLock.Lock()
+			delete(user.server.OnlineUserMap, user.UserName)
+			user.server.OnlineUserMap[newName] = user
+			user.server.mapLock.Unlock()
+
+			user.UserName = newName
+			user.SendMsg("You already changed your username to:" + user.UserName + "\n")
+		}
+
+	} else {
+		// chat to all user
+		user.server.BroadCast(user, msg)
+	}
+
 }
