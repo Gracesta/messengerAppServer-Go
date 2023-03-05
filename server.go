@@ -57,15 +57,9 @@ func (server *Server) Handler(conn net.Conn) {
 	fmt.Println("Connection built:", conn)
 
 	// Once a connection built, assign a user class for this
-	user := NewUser(conn)
+	user := NewUser(conn, server)
 
-	// New user added to online user map
-	server.mapLock.Lock()
-	server.OnlineUserMap[user.UserName] = user
-	server.mapLock.Unlock()
-
-	// Online anouncement for new user
-	server.BroadCast(user, "ONLINE")
+	user.Online()
 
 	// Handle message sent from client
 	go func() {
@@ -73,7 +67,8 @@ func (server *Server) Handler(conn net.Conn) {
 		for {
 			len_message, err := conn.Read(buff)
 			if len_message == 0 {
-				server.BroadCast(user, "Disconnected")
+				user.Offline()
+				return
 			}
 
 			if err != nil && err != io.EOF {
@@ -84,7 +79,8 @@ func (server *Server) Handler(conn net.Conn) {
 			// save message withought the last '\n'
 			msg := string(buff[:len_message-1])
 
-			server.BroadCast(user, msg)
+			// deal with user message
+			user.DoMessage(msg)
 
 		}
 	}()
