@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -61,6 +63,9 @@ func (server *Server) Handler(conn net.Conn) {
 
 	user.Online()
 
+	// Channel checks whether user is active (Otherwise kick this user)
+	isActive := make(chan bool)
+
 	// Handle message sent from client
 	go func() {
 		buff := make([]byte, 4096) // message buffer
@@ -79,13 +84,32 @@ func (server *Server) Handler(conn net.Conn) {
 			// save message withought the last '\n'
 			msg := string(buff[:len_message-1])
 
-			// deal with user message
+			// handle with user message
 			user.DoMessage(msg)
+
+			// Handling message means user is active
+			isActive <- true
 
 		}
 	}()
 
-	// select{}
+	for {
+		select {
+		case <-isActive:
+			// user is active, reset the timer
+			// pass
+		case <-time.After(time.Second * 60):
+			// Not active over time, kick this user
+			user.SendMsg("You/'re disconected since long time inactive")
+
+			// delete user
+			close(user.userChan)
+			conn.Close()
+
+			// exit from this handler
+			runtime.Goexit()
+		}
+	}
 }
 
 func (server *Server) Start() {
