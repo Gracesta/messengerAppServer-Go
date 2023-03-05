@@ -92,6 +92,27 @@ func (user *User) DoMessage(msg string) {
 			user.SendMsg("You already changed your username to:" + user.UserName + "\n")
 		}
 
+	} else if len(msg) > 3 && msg[:3] == "to|" {
+		to_username := strings.Split(msg, "|")[1]
+		if to_username == "" {
+			user.SendMsg("message format incorrect, follow the format: \"to|UserName|YourMessage\"\n")
+		}
+
+		// search the user in onlinemap
+		to_user, isExist := user.server.OnlineUserMap[to_username]
+		if !isExist {
+			user.SendMsg("User not exist\n")
+			return
+		}
+
+		// get the message and send it to the target user
+		userMessage := strings.Split(msg, "|")[2]
+		if userMessage == "" {
+			user.SendMsg("Not message received, resend it\n")
+		} else {
+			to_user.SendMsg("(Private) " + user.UserName + ": " + userMessage)
+		}
+
 	} else {
 		// chat to all user
 		user.server.BroadCast(user, msg)

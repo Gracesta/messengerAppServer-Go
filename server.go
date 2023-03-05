@@ -100,7 +100,7 @@ func (server *Server) Handler(conn net.Conn) {
 			// pass
 		case <-time.After(time.Second * 60):
 			// Not active over time, kick this user
-			user.SendMsg("You/'re disconected since long time inactive")
+			user.SendMsg("You're disconected since long time inactive")
 
 			// delete user
 			close(user.userChan)
