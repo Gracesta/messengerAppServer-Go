@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -32,9 +33,11 @@ func NewUser(conn net.Conn, server *Server) *User {
 
 // Listen user's channel, send message once received
 func (user *User) ListenUserMessage() {
-	for {
-		msg := <-user.userChan
-		user.conn.Write([]byte(msg + "\n"))
+	for msg := range user.userChan {
+		_, err := user.conn.Write([]byte(msg + "\n"))
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
